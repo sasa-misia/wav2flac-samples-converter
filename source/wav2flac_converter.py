@@ -1,0 +1,104 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jul 23 14:39:54 2024
+
+@author: salva
+"""
+
+####~ Requirements      ~####
+
+####~ Modules recall    ~####
+import os
+from os.path import isdir, isfile, join, basename, splitext, dirname, exists
+from pydub import AudioSegment
+from tqdm import tqdm
+import shutil
+from unidecode import unidecode
+
+####~ Functions         ~####
+def pthdirnav(path_start):
+    list_pth_el = os.listdir(path_start)
+    full_paths = [join(path_start, i) for i in list_pth_el]
+    list_sub_pths, list_files = list(), list()
+    for curr_path in full_paths:
+        if isdir(curr_path):
+            list_sub_pths.append(curr_path)
+        else:
+            list_files.append(curr_path)
+    return list_sub_pths, list_files
+
+def wav2flac(wav_path):
+    # if not basename(wav_path).isascii():
+    #     wav_basename_ascii = unidecode(basename(wav_path))
+    #     wav_path_ascii = join(dirname(wav_path), wav_basename_ascii)
+    #     os.rename(wav_path, wav_path_ascii)
+    #     wav_path = wav_path_ascii
+    flac_path = splitext(wav_path)[0] + '.flac'
+    song = AudioSegment.from_wav(wav_path)
+    song.export(flac_path, format = "flac")
+    
+def fileconv(curr_path, remExsWav=True):
+    success = False
+    if isfile(curr_path) and splitext(curr_path)[1] == '.wav':
+        if basename(curr_path)[:2] == '._': # Stupid fake, hidden, and not necessary files (macos issue...)
+            os.remove(curr_path)
+        else:
+            wav2flac(curr_path)
+            if remExsWav:
+                os.remove(curr_path)
+            else:
+                old_wav_pth_bs = dirname(curr_path) + '\\old_wav'
+                if not(exists(old_wav_pth_bs)):
+                    os.mkdir(old_wav_pth_bs)
+                old_wav_pth_fl = join(old_wav_pth_bs, basename(curr_path))
+                shutil.move(curr_path, old_wav_pth_fl)
+            success = True
+    return success
+    
+####~ Core              ~####
+scan_path = [input(f'Samples folder ([{os.getcwd()}]): ') or os.getcwd()]
+origin_scan_path = scan_path.copy()
+
+rem_usr_in = input('Do you want to remove pre-existing wav files? ([y]/n): ' or 'y')
+if rem_usr_in == 'y':
+    rem_wav = True
+elif rem_usr_in == 'n':
+    rem_wav = False
+    print('''Inside each sub-folder that contains wav files, 
+             a new folder (old_wav) will be created and all 
+             the pre-existing samples will be moved there!''')
+else:
+    raise Exception('Just "y" or "n", fucking asshole!')
+    
+files_conv = list()
+while len(scan_path) >= 1:
+    temp_sub_dirs, temp_files = pthdirnav(scan_path[0])
+    
+    scan_path += temp_sub_dirs
+    files_conv += temp_files
+    
+    scan_path.pop(0)
+    
+files_succ_conv = 0
+files_err = list()
+for idx in tqdm(range(len(files_conv))):
+    curr_fl_pth = files_conv[idx]
+    try:
+        succ = fileconv(curr_fl_pth, remExsWav=rem_wav)
+        if succ:
+            files_succ_conv += 1
+    except:
+        # print('Error with sample: '+curr_fl_pth)
+        files_err.append(curr_fl_pth)
+
+err_report_filename = join(origin_scan_path[0],'wav_errors.txt')
+if exists(err_report_filename):
+    os.remove(err_report_filename)
+    
+with open(err_report_filename, 'w') as f:
+    f.write('The following files were not converted (please consider renaming): \n')
+    for line in files_err:
+        f.write(f"{unidecode(line)}\n")
+f.close()
+    
+print(f"Succesfully coverted {files_succ_conv} (of {files_succ_conv+len(files_err)}) wav files into flac")
