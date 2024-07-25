@@ -13,7 +13,7 @@ If you are lucky, you can save up to 70% of storage!!!
 
 You can use it as an exe file with Windows or as a script from python.
 
-Link to exe file: https://mega.nz/file/heFzhLLB#fifyke786xTbUzq3uQujWjkjjIHh1cG80MYm4K5_RqI
+Link to exe file: https://mega.nz/folder/ZK0QkKwB#z4Ihm6bcjdk8dUJKeYOHWw
 
 In order to use it as an executable, you have to move the wav2flac_converter.exe and ffmpeg.exe files to your samples folder, then you just need to run it and the program will do the hard work for you, while you're eating fat and crispy chips on your sofa...
 
