@@ -19,13 +19,19 @@ from unidecode import unidecode
 def pthdirnav(path_start):
     list_pth_el = os.listdir(path_start)
     full_paths = [join(path_start, i) for i in list_pth_el]
-    list_sub_pths, list_files = list(), list()
+    list_sub_pths, list_files, list_machidd = list(), list(), list()
     for curr_path in full_paths:
         if isdir(curr_path):
-            list_sub_pths.append(curr_path)
+            if basename(curr_path).lower() == '__macosx': # Path full of hidden files, not meaningful for windows. If you have macOS it will be rebuilt
+                try:
+                    os.remove(curr_path)
+                except:
+                    list_machidd.append(curr_path)
+            else:
+                list_sub_pths.append(curr_path)
         else:
             list_files.append(curr_path)
-    return list_sub_pths, list_files
+    return list_sub_pths, list_files, list_machidd
 
 def wav2flac(wav_path):
     # if not basename(wav_path).isascii():
@@ -39,20 +45,25 @@ def wav2flac(wav_path):
     
 def fileconv(curr_path, remExsWav=True):
     success = False
-    if isfile(curr_path) and splitext(curr_path)[1] == '.wav':
-        if basename(curr_path)[:2] == '._': # Stupid fake, hidden, and not necessary files (macos issue...)
+    if isfile(curr_path):
+        if basename(curr_path)[:2] == '._' or basename(curr_path) == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
             os.remove(curr_path)
+            
         else:
-            wav2flac(curr_path)
-            if remExsWav:
+            if splitext(curr_path)[1].lower() == '.wav':
+                wav2flac(curr_path)
+                if remExsWav:
+                    os.remove(curr_path)
+                else:
+                    old_wav_pth_bs = dirname(curr_path) + '\\old_wav'
+                    if not(exists(old_wav_pth_bs)):
+                        os.mkdir(old_wav_pth_bs)
+                    old_wav_pth_fl = join(old_wav_pth_bs, basename(curr_path))
+                    shutil.move(curr_path, old_wav_pth_fl)
+                success = True
+                
+            elif splitext(curr_path)[1].lower() == '.asd':
                 os.remove(curr_path)
-            else:
-                old_wav_pth_bs = dirname(curr_path) + '\\old_wav'
-                if not(exists(old_wav_pth_bs)):
-                    os.mkdir(old_wav_pth_bs)
-                old_wav_pth_fl = join(old_wav_pth_bs, basename(curr_path))
-                shutil.move(curr_path, old_wav_pth_fl)
-            success = True
     return success
     
 ####~ Core              ~####
@@ -70,12 +81,13 @@ elif rem_usr_in == 'n':
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
     
-files_conv = list()
+files_conv, fold_hidd_nr = list(), list()
 while len(scan_path) >= 1:
-    temp_sub_dirs, temp_files = pthdirnav(scan_path[0])
+    temp_sub_dirs, temp_files, temp_hidd = pthdirnav(scan_path[0])
     
     scan_path += temp_sub_dirs
     files_conv += temp_files
+    fold_hidd_nr += temp_hidd
     
     scan_path.pop(0)
     
@@ -95,10 +107,17 @@ err_report_filename = join(origin_scan_path[0],'wav_errors.txt')
 if exists(err_report_filename):
     os.remove(err_report_filename)
     
-with open(err_report_filename, 'w') as f:
-    f.write('The following files were not converted (please consider renaming): \n')
-    for line in files_err:
-        f.write(f"{unidecode(line)}\n")
-f.close()
+if len(files_err) > 0 or len(fold_hidd_nr) > 0:
+    with open(err_report_filename, 'w') as f:
+        f.write('The following files were not converted (please consider renaming): \n')
+        for line in files_err:
+            f.write(f"{unidecode(line)}\n")
+        if len(fold_hidd_nr) > 0:
+            f.write('\nThe following hidden folders were not deleted (please check file permission): \n')
+            for line in fold_hidd_nr:
+                f.write(f"{unidecode(line)}\n")
+    f.close()
     
 print(f"Succesfully coverted {files_succ_conv} (of {files_succ_conv+len(files_err)}) wav files into flac")
+
+input('Press Enter to exit...')
