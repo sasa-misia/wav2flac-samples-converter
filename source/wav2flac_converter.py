@@ -27,6 +27,7 @@ def pthdirnav(path_start):
                     os.remove(curr_path)
                 except:
                     list_machidd.append(curr_path)
+                    list_sub_pths.append(curr_path)
             else:
                 list_sub_pths.append(curr_path)
         else:
@@ -109,9 +110,10 @@ if exists(err_report_filename):
     
 if len(files_err) > 0 or len(fold_hidd_nr) > 0:
     with open(err_report_filename, 'w') as f:
-        f.write('The following files were not converted (please consider renaming): \n')
-        for line in files_err:
-            f.write(f"{unidecode(line)}\n")
+        if len(files_err) > 0:
+            f.write('The following files were not converted (please consider renaming): \n')
+            for line in files_err:
+                f.write(f"{unidecode(line)}\n")
         if len(fold_hidd_nr) > 0:
             f.write('\nThe following hidden folders were not deleted (please check file permission): \n')
             for line in fold_hidd_nr:
