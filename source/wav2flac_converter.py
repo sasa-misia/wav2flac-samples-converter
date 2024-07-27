@@ -123,7 +123,7 @@ files_err = list()
 for idx in tqdm(range(len(files_conv))):
     curr_fl_pth = files_conv[idx]
     try:
-        succ = fileconv(curr_fl_pth, remExsWav=rem_wav, moveMIDI=move_mid, orig_path=origin_scan_path)
+        succ = fileconv(curr_fl_pth, remExsWav=rem_wav, moveMIDI=move_mid, orig_path=origin_scan_path[0])
         if succ:
             files_succ_conv += 1
     except:
