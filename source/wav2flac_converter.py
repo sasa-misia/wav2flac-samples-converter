@@ -92,17 +92,18 @@ if rem_usr_in == 'y':
     rem_wav = True
 elif rem_usr_in == 'n':
     rem_wav = False
-    print('''Inside each sub-folder that contains wav files, 
-             a new folder (old_wav) will be created and all 
-             the pre-existing samples will be moved there!''')
+    print('Inside each sub-folder that contains wav files, ' \
+          'a new folder (old_wav) will be created and all ' \
+          'the pre-existing samples will be moved there!')
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
     
 move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ' or 'y')
 if move_midi_in == 'y':
     move_mid = True
-    print(f"""A new folder (MIDI) will be created in {origin_scan_path[0]} 
-              and all midi files will be moved there!""")
+    print("A new folder (MIDI) will be created in: [" \
+          f"{origin_scan_path[0]}] " \
+          "and all midi files will be moved there!")
 elif move_midi_in == 'n':
     move_mid = False
 else:
