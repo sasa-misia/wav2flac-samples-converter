@@ -101,10 +101,10 @@ else:
 move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ' or 'y')
 if move_midi_in == 'y':
     move_mid = True
+    print(f"""A new folder (MIDI) will be created in {origin_scan_path[0]} 
+              and all midi files will be moved there!""")
 elif move_midi_in == 'n':
     move_mid = False
-    print(f"""A new folder called MIDI will be created in {origin_scan_path} 
-              and all midi files will be moved there!""")
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
     
