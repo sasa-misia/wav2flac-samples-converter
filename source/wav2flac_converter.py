@@ -24,7 +24,7 @@ def pthdirnav(path_start):
         if isdir(curr_path):
             if basename(curr_path).lower() == '__macosx': # Path full of hidden files, not meaningful for windows. If you have macOS it will be rebuilt
                 try:
-                    os.remove(curr_path)
+                    shutil.rmtree(curr_path)
                 except:
                     list_machidd.append(curr_path)
                     list_sub_pths.append(curr_path)
@@ -44,7 +44,7 @@ def wav2flac(wav_path):
     song = AudioSegment.from_wav(wav_path)
     song.export(flac_path, format = "flac")
     
-def fileconv(curr_path, remExsWav=True):
+def fileconv(curr_path, remExsWav=True, moveMIDI=False, orig_path=os.getcwd()):
     success = False
     if isfile(curr_path):
         if basename(curr_path)[:2] == '._' or basename(curr_path) == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
@@ -56,15 +56,31 @@ def fileconv(curr_path, remExsWav=True):
                 if remExsWav:
                     os.remove(curr_path)
                 else:
-                    old_wav_pth_bs = dirname(curr_path) + '\\old_wav'
+                    old_wav_pth_bs = join(dirname(curr_path), 'old_wav')
+                    
                     if not(exists(old_wav_pth_bs)):
                         os.mkdir(old_wav_pth_bs)
+                        
                     old_wav_pth_fl = join(old_wav_pth_bs, basename(curr_path))
                     shutil.move(curr_path, old_wav_pth_fl)
+                    
                 success = True
                 
-            elif splitext(curr_path)[1].lower() == '.asd':
+            elif splitext(curr_path)[1].lower() == '.asd' or splitext(curr_path)[1].lower() == '.reapeaks': # Analysis files of: Ableton, Reaper
                 os.remove(curr_path)
+                
+            elif splitext(curr_path)[1].lower() == '.mid' and moveMIDI: # Move midi files to new MIDI folder, inside origin_scan_path
+                comm_path_prfx = os.path.commonpath([curr_path, orig_path])
+                rltv_path_sffx = os.path.relpath(dirname(curr_path), comm_path_prfx)
+                
+                new_move_path = join(comm_path_prfx, 'MIDI', rltv_path_sffx)
+                
+                if not(exists(new_move_path)):
+                    os.makedirs(new_move_path) # To create nested directories
+                    
+                new_move_pth_fl = join(new_move_path, basename(curr_path))
+                shutil.move(curr_path, new_move_pth_fl)
+                
     return success
     
 ####~ Core              ~####
@@ -79,6 +95,16 @@ elif rem_usr_in == 'n':
     print('''Inside each sub-folder that contains wav files, 
              a new folder (old_wav) will be created and all 
              the pre-existing samples will be moved there!''')
+else:
+    raise Exception('Just "y" or "n", fucking asshole!')
+    
+move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ' or 'y')
+if move_midi_in == 'y':
+    move_mid = True
+elif move_midi_in == 'n':
+    move_mid = False
+    print(f"""A new folder called MIDI will be created in {origin_scan_path} 
+              and all midi files will be moved there!""")
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
     
@@ -97,7 +123,7 @@ files_err = list()
 for idx in tqdm(range(len(files_conv))):
     curr_fl_pth = files_conv[idx]
     try:
-        succ = fileconv(curr_fl_pth, remExsWav=rem_wav)
+        succ = fileconv(curr_fl_pth, remExsWav=rem_wav, moveMIDI=move_mid, orig_path=origin_scan_path)
         if succ:
             files_succ_conv += 1
     except:
