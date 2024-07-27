@@ -73,19 +73,22 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, orig_path=os.getcwd()):
                 comm_path_prfx = os.path.commonpath([curr_path, orig_path])
                 rltv_path_sffx = os.path.relpath(dirname(curr_path), comm_path_prfx)
                 
-                new_move_path = join(comm_path_prfx, 'MIDI', rltv_path_sffx)
-                
-                if not(exists(new_move_path)):
-                    os.makedirs(new_move_path) # To create nested directories
+                midi_fldnm = 'MIDI'
+                if not(rltv_path_sffx[:4] == midi_fldnm): # Continue only if the file is not yet in MIDI folder    
+                    new_move_path = join(comm_path_prfx, midi_fldnm, rltv_path_sffx)
                     
-                new_move_pth_fl = join(new_move_path, basename(curr_path))
-                shutil.move(curr_path, new_move_pth_fl)
+                    if not(exists(new_move_path)):
+                        os.makedirs(new_move_path) # To create nested directories
+                        
+                    new_move_pth_fl = join(new_move_path, basename(curr_path))
+                    shutil.move(curr_path, new_move_pth_fl)
                 
     return success
     
 ####~ Core              ~####
 scan_path = [input(f'Samples folder ([{os.getcwd()}]): ') or os.getcwd()]
 origin_scan_path = scan_path.copy()
+all_paths = scan_path.copy()
 
 rem_usr_in = input('Do you want to remove pre-existing wav files? ([y]/n): ' or 'y')
 if rem_usr_in == 'y':
@@ -114,6 +117,7 @@ while len(scan_path) >= 1:
     temp_sub_dirs, temp_files, temp_hidd = pthdirnav(scan_path[0])
     
     scan_path += temp_sub_dirs
+    all_paths += temp_sub_dirs
     files_conv += temp_files
     fold_hidd_nr += temp_hidd
     
@@ -131,6 +135,33 @@ for idx in tqdm(range(len(files_conv))):
         # print('Error with sample: '+curr_fl_pth)
         files_err.append(curr_fl_pth)
 
+some_fld_empty = True
+remvd_flds = list()
+while some_fld_empty:
+    some_fld_empty = False
+    for curr_fold in all_paths:
+        if exists(curr_fold) and (len(os.listdir(curr_fold)) == 0):
+            try:
+                os.rmdir(curr_fold)
+                remvd_flds.append(curr_fold)
+                some_fld_empty = True
+            except:
+                fold_hidd_nr.append(curr_fold)
+
+if len(remvd_flds) > 0:
+    print(f"{len(remvd_flds)} folders were empty -> deleted! (check deleted_folders.txt for info)")
+    
+del_report_filename = join(origin_scan_path[0],'deleted_folders.txt')
+if exists(del_report_filename):
+    os.remove(del_report_filename)
+
+if len(remvd_flds) > 0:
+    with open(del_report_filename, 'w') as d:
+        d.write('The following folders were deleted because empty: \n')
+        for line in remvd_flds:
+            d.write(f"{unidecode(line)}\n")
+    d.close()
+
 err_report_filename = join(origin_scan_path[0],'wav_errors.txt')
 if exists(err_report_filename):
     os.remove(err_report_filename)
@@ -142,7 +173,7 @@ if len(files_err) > 0 or len(fold_hidd_nr) > 0:
             for line in files_err:
                 f.write(f"{unidecode(line)}\n")
         if len(fold_hidd_nr) > 0:
-            f.write('\nThe following hidden folders were not deleted (please check file permission): \n')
+            f.write('\nThe following hidden (or empty) folders were not deleted (please check file permission): \n')
             for line in fold_hidd_nr:
                 f.write(f"{unidecode(line)}\n")
     f.close()
