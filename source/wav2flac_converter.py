@@ -5,8 +5,6 @@ Created on Tue Jul 23 14:39:54 2024
 @author: salva
 """
 
-####~ Requirements      ~####
-
 ####~ Modules recall    ~####
 import os
 from os.path import isdir, isfile, join, basename, splitext, dirname, exists
@@ -14,6 +12,10 @@ from pydub import AudioSegment
 from tqdm import tqdm
 import shutil
 from unidecode import unidecode
+
+####~ Requirements      ~####
+if shutil.which('ffmpeg') == None:
+    raise Exception('You must have ffmpeg installed! Otherwise flac files will be corrupted!')
 
 ####~ Functions         ~####
 def pthdirnav(path_start):
