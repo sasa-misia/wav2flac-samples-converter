@@ -5,8 +5,6 @@ Created on Tue Jul 23 14:39:54 2024
 @author: salva
 """
 
-####~ Requirements      ~####
-
 ####~ Modules recall    ~####
 import os
 from os.path import isdir, isfile, join, basename, splitext, dirname, exists
@@ -14,6 +12,10 @@ from pydub import AudioSegment
 from tqdm import tqdm
 import shutil
 from unidecode import unidecode
+
+####~ Requirements      ~####
+if shutil.which('ffmpeg') == None:
+    raise Exception('You must have ffmpeg installed! Otherwise flac files will be corrupted!')
 
 ####~ Functions         ~####
 def pthdirnav(path_start):
@@ -35,52 +37,65 @@ def pthdirnav(path_start):
     return list_sub_pths, list_files, list_machidd
 
 def wav2flac(wav_path):
-    # if not basename(wav_path).isascii():
-    #     wav_basename_ascii = unidecode(basename(wav_path))
-    #     wav_path_ascii = join(dirname(wav_path), wav_basename_ascii)
-    #     os.rename(wav_path, wav_path_ascii)
-    #     wav_path = wav_path_ascii
     flac_path = splitext(wav_path)[0] + '.flac'
-    song = AudioSegment.from_wav(wav_path)
-    song.export(flac_path, format = "flac")
+    wav_sampl = AudioSegment.from_wav(wav_path)
+    wav_sampl.export(flac_path, format = "flac")
+    
+def gaudio2flac(gaudio_path):
+    flac_path = splitext(gaudio_path)[0] + '.flac'
+    gad_sampl = AudioSegment.from_file(gaudio_path)
+    gad_sampl.export(flac_path, format = "flac")
     
 def fileconv(curr_path, remExsWav=True, moveMIDI=False, orig_path=os.getcwd()):
     success = False
     if isfile(curr_path):
-        if basename(curr_path)[:2] == '._' or basename(curr_path) == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
+        file_ext = splitext(curr_path)[1].lower()
+        file_bsn = basename(curr_path)
+        
+        comm_path_prfx = os.path.commonpath([curr_path, orig_path])
+        rltv_path_sffx = os.path.relpath(dirname(curr_path), comm_path_prfx)
+        
+        midi_fldnm = 'MIDI'
+        oldsmpl_fldnm = '_old_wav_check'
+        
+        if file_bsn[:2] == '._' or file_bsn == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
             os.remove(curr_path)
             
+        elif rltv_path_sffx[:len(oldsmpl_fldnm)] == oldsmpl_fldnm:
+            success = True # The process is skipped because the current file is in the Old Wav Path (no conversion needed)
+            
         else:
-            if splitext(curr_path)[1].lower() == '.wav':
-                wav2flac(curr_path)
+            if file_ext == '.wav' or file_ext == '.aif' or file_ext == '.aiff':
+                if file_ext == '.wav':
+                    wav2flac(curr_path)
+                else:
+                    gaudio2flac(curr_path)
+                    
                 if remExsWav:
                     os.remove(curr_path)
                 else:
-                    old_wav_pth_bs = join(dirname(curr_path), 'old_wav')
-                    
-                    if not(exists(old_wav_pth_bs)):
-                        os.mkdir(old_wav_pth_bs)
+                    if not(rltv_path_sffx[:len(oldsmpl_fldnm)] == oldsmpl_fldnm): # Continue only if the file is not yet in Old Wav Folder   
+                        new_move_path = join(comm_path_prfx, oldsmpl_fldnm, rltv_path_sffx)
                         
-                    old_wav_pth_fl = join(old_wav_pth_bs, basename(curr_path))
-                    shutil.move(curr_path, old_wav_pth_fl)
+                        if not(exists(new_move_path)):
+                            os.makedirs(new_move_path) # To create nested directories
+                            
+                        new_move_pth_fl = join(new_move_path, file_bsn)
+                        shutil.move(curr_path, new_move_pth_fl)
                     
                 success = True
                 
-            elif splitext(curr_path)[1].lower() == '.asd' or splitext(curr_path)[1].lower() == '.reapeaks': # Analysis files of: Ableton, Reaper
+            elif file_ext == '.asd' or file_ext == '.reapeaks': # Analysis files of: Ableton, Reaper
                 os.remove(curr_path)
                 
-            elif splitext(curr_path)[1].lower() == '.mid' and moveMIDI: # Move midi files to new MIDI folder, inside origin_scan_path
-                comm_path_prfx = os.path.commonpath([curr_path, orig_path])
-                rltv_path_sffx = os.path.relpath(dirname(curr_path), comm_path_prfx)
-                
-                midi_fldnm = 'MIDI'
-                if not(rltv_path_sffx[:4] == midi_fldnm): # Continue only if the file is not yet in MIDI folder    
+            elif file_ext == '.mid' and moveMIDI: # Move midi files to new MIDI folder, inside origin_scan_path
+                if not(rltv_path_sffx[:len(midi_fldnm)] == midi_fldnm): # Continue only if the file is not yet in MIDI folder    
                     new_move_path = join(comm_path_prfx, midi_fldnm, rltv_path_sffx)
                     
                     if not(exists(new_move_path)):
                         os.makedirs(new_move_path) # To create nested directories
                         
-                    new_move_pth_fl = join(new_move_path, basename(curr_path))
+                    new_move_pth_fl = join(new_move_path, file_bsn)
                     shutil.move(curr_path, new_move_pth_fl)
                 
     return success
@@ -90,18 +105,17 @@ scan_path = [input(f'Samples folder ([{os.getcwd()}]): ') or os.getcwd()]
 origin_scan_path = scan_path.copy()
 all_paths = scan_path.copy()
 
-rem_usr_in = input('Do you want to remove pre-existing wav files? ([y]/n): ' or 'y')
+rem_usr_in = input('Do you want to remove pre-existing wav files? (y/[n]): ') or 'n'
 if rem_usr_in == 'y':
     rem_wav = True
 elif rem_usr_in == 'n':
     rem_wav = False
-    print('Inside each sub-folder that contains wav files, ' \
-          'a new folder (old_wav) will be created and all ' \
-          'the pre-existing samples will be moved there!')
+    print("A new folder (_old_wav_check) will be created and " \
+          "all the pre-existing samples will be moved there!")
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
     
-move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ' or 'y')
+move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ') or 'y'
 if move_midi_in == 'y':
     move_mid = True
     print("A new folder (MIDI) will be created in: [" \
