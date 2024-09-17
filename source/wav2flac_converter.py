@@ -46,26 +46,59 @@ def gaudio2flac(gaudio_path):
     gad_sampl = AudioSegment.from_file(gaudio_path)
     gad_sampl.export(flac_path, format = "flac")
     
-def fileconv(curr_path, remExsWav=True, moveMIDI=False, orig_path=os.getcwd()):
+def filepathinfo(curr_path, base_path):
+    file_basenm = basename(curr_path)
+    file_extens = splitext(curr_path)[1].lower()
+    path_prefix = os.path.commonpath([curr_path, base_path])
+    path_suffix = os.path.relpath(dirname(curr_path), path_prefix)
+    return file_basenm, file_extens, path_prefix, path_suffix
+    
+def movewsub(curr_path, base_path, new_fold):
+    file_basenm, _, path_prefix, path_suffix = filepathinfo(curr_path, base_path)
+    
+    if not(path_suffix[:len(new_fold)] == new_fold): # Continue only if the file is not yet in Old Wav Folder   
+        new_move_path = join(path_prefix, new_fold, path_suffix)
+        
+        if not(exists(new_move_path)):
+            os.makedirs(new_move_path) # To create nested directories
+            
+        new_move_pth_fl = join(new_move_path, file_basenm)
+        shutil.move(curr_path, new_move_pth_fl)
+    
+def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_path=os.getcwd()):
     success = False
     if isfile(curr_path):
-        file_ext = splitext(curr_path)[1].lower()
-        file_bsn = basename(curr_path)
+        file_bsn, file_ext, comm_path_prfx, rltv_path_sffx = filepathinfo(curr_path, orig_path)
         
-        comm_path_prfx = os.path.commonpath([curr_path, orig_path])
-        rltv_path_sffx = os.path.relpath(dirname(curr_path), comm_path_prfx)
-        
+        lssless_fldnm = '_old_wav_check'
+        unrecog_fldnm = '_Unrecognized'
+        docu_fldnm = '_Documentation'
         midi_fldnm = 'MIDI'
-        oldsmpl_fldnm = '_old_wav_check'
+        arturia_fldnm = '_Arturia Banks'
+        serum_fldnm = '_Serum Banks'
+        vital_fldnm = '_Vital Banks'
+        ableton_fldnm = '_Ableton Banks'
+        natinstr_fldnm = '_NI Banks'
+        
+        lssless_extns = ['.wav', '.aif', '.aiff']
+        analsys_extns = ['.asd', '.reapeaks']
+        unrecog_extns = ['.dat', '']
+        docu_extns = ['.html', '.docx', '.doc', '.pdf', '.jpg', '.jpeg', '.png', '.txt', '.rtf', '.xml', '.asc', '.msg', '.wpd', '.wps']
+        midi_extns = ['.mid', '.midi']
+        arturia_extns = ['.labx', '.jupx', '.prox', '.junx', '.minix', '.pgtx']
+        serum_extns = ['.fxp']
+        vital_extns = ['.vitalbank', '.vital', '.vitalskin']
+        ableton_extns = ['.abl', '.ablbundle', '.adg', '.agr', '.adv', '.alc', '.alp', '.als', '.ams', '.amxd', '.ask', '.cfg', '.xmp']
+        natinstr_extns = ['.nmsv', '.nksf', '.bnk', '.ksd', '.ngrr']
         
         if file_bsn[:2] == '._' or file_bsn == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
             os.remove(curr_path)
             
-        elif rltv_path_sffx[:len(oldsmpl_fldnm)] == oldsmpl_fldnm:
+        elif rltv_path_sffx[:len(lssless_fldnm)] == lssless_fldnm:
             success = True # The process is skipped because the current file is in the Old Wav Path (no conversion needed)
             
         else:
-            if file_ext == '.wav' or file_ext == '.aif' or file_ext == '.aiff':
+            if any([x == file_ext for x in lssless_extns]):
                 if file_ext == '.wav':
                     wav2flac(curr_path)
                 else:
@@ -74,29 +107,36 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, orig_path=os.getcwd()):
                 if remExsWav:
                     os.remove(curr_path)
                 else:
-                    if not(rltv_path_sffx[:len(oldsmpl_fldnm)] == oldsmpl_fldnm): # Continue only if the file is not yet in Old Wav Folder   
-                        new_move_path = join(comm_path_prfx, oldsmpl_fldnm, rltv_path_sffx)
-                        
-                        if not(exists(new_move_path)):
-                            os.makedirs(new_move_path) # To create nested directories
-                            
-                        new_move_pth_fl = join(new_move_path, file_bsn)
-                        shutil.move(curr_path, new_move_pth_fl)
+                    movewsub(curr_path, orig_path, lssless_fldnm)
                     
                 success = True
                 
-            elif file_ext == '.asd' or file_ext == '.reapeaks': # Analysis files of: Ableton, Reaper
+            elif any([x == file_ext for x in analsys_extns]): # Analysis files of: Ableton, Reaper
                 os.remove(curr_path)
                 
-            elif file_ext == '.mid' and moveMIDI: # Move midi files to new MIDI folder, inside origin_scan_path
-                if not(rltv_path_sffx[:len(midi_fldnm)] == midi_fldnm): # Continue only if the file is not yet in MIDI folder    
-                    new_move_path = join(comm_path_prfx, midi_fldnm, rltv_path_sffx)
-                    
-                    if not(exists(new_move_path)):
-                        os.makedirs(new_move_path) # To create nested directories
-                        
-                    new_move_pth_fl = join(new_move_path, file_bsn)
-                    shutil.move(curr_path, new_move_pth_fl)
+            elif any([x == file_ext for x in unrecog_extns]): # Move unrecognized files to new _Unrecognized folder, inside orig_path
+                movewsub(curr_path, orig_path, unrecog_fldnm)
+            
+            elif any([x == file_ext for x in docu_extns]): # Move documentation files to new _Documentation folder, inside orig_path
+                movewsub(curr_path, orig_path, docu_fldnm)
+                
+            elif any([x == file_ext for x in midi_extns]) and moveMIDI: # Move midi files to new MIDI folder, inside orig_path
+                movewsub(curr_path, orig_path, midi_fldnm)
+                
+            elif any([x == file_ext for x in arturia_extns]) and moveBanks: # Move arturia files to new _Arturia Banks folder, inside orig_path
+                movewsub(curr_path, orig_path, arturia_fldnm)
+                
+            elif any([x == file_ext for x in serum_extns]) and moveBanks: # Move serum files to new _Serum Banks folder, inside orig_path
+                movewsub(curr_path, orig_path, serum_fldnm)
+            
+            elif any([x == file_ext for x in vital_extns]) and moveBanks: # Move vital files to new _Vital Banks folder, inside orig_path
+                movewsub(curr_path, orig_path, vital_fldnm)
+            
+            elif any([x == file_ext for x in ableton_extns]) and moveBanks: # Move ableton files to new _Ableton Banks folder, inside orig_path
+                movewsub(curr_path, orig_path, ableton_fldnm)
+            
+            elif any([x == file_ext for x in natinstr_extns]) and moveBanks: # Move native instruments files to new _NI Banks folder, inside orig_path
+                movewsub(curr_path, orig_path, natinstr_fldnm)
                 
     return success
     
@@ -126,6 +166,17 @@ elif move_midi_in == 'n':
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
     
+move_banks_in = input('Do you want to move banks file in separate folders? ([y]/n): ') or 'y'
+if move_banks_in == 'y':
+    move_bnk = True
+    print("New folders (ex: _Arturia Banks) will be created in: [" \
+          f"{origin_scan_path[0]}] " \
+          "and all bank files will be moved there!")
+elif move_banks_in == 'n':
+    move_bnk = False
+else:
+    raise Exception('Just "y" or "n", fucking asshole!')
+    
 files_conv, fold_hidd_nr = list(), list()
 while len(scan_path) >= 1:
     temp_sub_dirs, temp_files, temp_hidd = pthdirnav(scan_path[0])
@@ -142,7 +193,7 @@ files_err = list()
 for idx in tqdm(range(len(files_conv))):
     curr_fl_pth = files_conv[idx]
     try:
-        succ = fileconv(curr_fl_pth, remExsWav=rem_wav, moveMIDI=move_mid, orig_path=origin_scan_path[0])
+        succ = fileconv(curr_fl_pth, remExsWav=rem_wav, moveMIDI=move_mid, moveBanks=move_bnk, orig_path=origin_scan_path[0])
         if succ:
             files_succ_conv += 1
     except:
