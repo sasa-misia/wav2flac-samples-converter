@@ -83,7 +83,7 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
         lssless_extns = ['.wav', '.aif', '.aiff']
         analsys_extns = ['.asd', '.reapeaks']
         unrecog_extns = ['.dat', '']
-        docu_extns = ['.html', '.docx', '.doc', '.pdf', '.jpg', '.jpeg', '.png', '.txt', '.rtf', '.xml', '.asc', '.msg', '.wpd', '.wps']
+        docu_extns = ['.html', '.docx', '.doc', '.pdf', '.jpg', '.jpeg', '.png', '.txt', '.rtf', '.xml', '.asc', '.msg', '.wpd', '.wps', '.url']
         midi_extns = ['.mid', '.midi']
         arturia_extns = ['.labx', '.jupx', '.prox', '.junx', '.minix', '.pgtx']
         serum_extns = ['.fxp']
