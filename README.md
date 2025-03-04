@@ -1,4 +1,4 @@
-# wav2flac_sample_converter
+# wav2flac-samples-converter
  Automatic audio converter. From wav (or aif) to flac, for all your directory and subdirectories content
 
 Hello clochard!
