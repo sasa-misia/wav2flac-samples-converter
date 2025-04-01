@@ -72,24 +72,24 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
         
         lssless_fldnm = '_old_wav_check'
         unrecog_fldnm = '_Unrecognized'
-        docu_fldnm = '_Documentation'
-        midi_fldnm = 'MIDI'
+        docu_fldnm    = '_Documentation'
+        midi_fldnm    = '_MIDI'
         arturia_fldnm = '_Arturia Banks'
-        serum_fldnm = '_Serum Banks'
-        vital_fldnm = '_Vital Banks'
+        serum_fldnm   = '_Serum Banks'
+        vital_fldnm   = '_Vital Banks'
         ableton_fldnm = '_Ableton Banks'
-        natinstr_fldnm = '_NI Banks'
+        natinst_fldnm = '_NI Banks'
         
         lssless_extns = ['.wav', '.aif', '.aiff']
         analsys_extns = ['.asd', '.reapeaks']
         unrecog_extns = ['.dat', '']
-        docu_extns = ['.html', '.docx', '.doc', '.pdf', '.jpg', '.jpeg', '.png', '.txt', '.rtf', '.xml', '.asc', '.msg', '.wpd', '.wps', '.url']
-        midi_extns = ['.mid', '.midi']
+        docu_extns    = ['.html', '.docx', '.doc', '.pdf', '.jpg', '.jpeg', '.png', '.txt', '.rtf', '.xml', '.asc', '.msg', '.wpd', '.wps', '.url']
+        midi_extns    = ['.mid', '.midi']
         arturia_extns = ['.labx', '.jupx', '.prox', '.junx', '.minix', '.pgtx']
-        serum_extns = ['.fxp']
-        vital_extns = ['.vitalbank', '.vital', '.vitalskin']
+        serum_extns   = ['.fxp']
+        vital_extns   = ['.vitalbank', '.vital', '.vitalskin']
         ableton_extns = ['.abl', '.ablbundle', '.adg', '.agr', '.adv', '.alc', '.alp', '.als', '.ams', '.amxd', '.ask', '.cfg', '.xmp']
-        natinstr_extns = ['.nmsv', '.nksf', '.bnk', '.ksd', '.ngrr']
+        natinst_extns = ['.nmsv', '.nksf', '.bnk', '.ksd', '.ngrr']
         
         if file_bsn[:2] == '._' or file_bsn == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
             os.remove(curr_path)
@@ -135,8 +135,8 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
             elif any([x == file_ext for x in ableton_extns]) and moveBanks: # Move ableton files to new _Ableton Banks folder, inside orig_path
                 movewsub(curr_path, orig_path, ableton_fldnm)
             
-            elif any([x == file_ext for x in natinstr_extns]) and moveBanks: # Move native instruments files to new _NI Banks folder, inside orig_path
-                movewsub(curr_path, orig_path, natinstr_fldnm)
+            elif any([x == file_ext for x in natinst_extns]) and moveBanks: # Move native instruments files to new _NI Banks folder, inside orig_path
+                movewsub(curr_path, orig_path, natinst_fldnm)
                 
     return success
     
@@ -158,9 +158,6 @@ else:
 move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ') or 'y'
 if move_midi_in == 'y':
     move_mid = True
-    print("A new folder (MIDI) will be created in: [" \
-          f"{origin_scan_path[0]}] " \
-          "and all midi files will be moved there!")
 elif move_midi_in == 'n':
     move_mid = False
 else:
@@ -169,13 +166,20 @@ else:
 move_banks_in = input('Do you want to move banks file in separate folders? ([y]/n): ') or 'y'
 if move_banks_in == 'y':
     move_bnk = True
-    print("New folders (ex: _Arturia Banks) will be created in: [" \
-          f"{origin_scan_path[0]}] " \
-          "and all bank files will be moved there!")
 elif move_banks_in == 'n':
     move_bnk = False
 else:
     raise Exception('Just "y" or "n", fucking asshole!')
+    
+if move_mid:
+    print("Note 1: a new folder (_MIDI) will be created in: [" \
+          f"{origin_scan_path[0]}] " \
+          "and all midi files will be moved there!")
+
+if move_bnk:
+    print("Note 2: new folders (ex: _Arturia Banks) will be created in: [" \
+          f"{origin_scan_path[0]}] " \
+          "and all bank files will be moved there!")
     
 files_conv, fold_hidd_nr = list(), list()
 while len(scan_path) >= 1:

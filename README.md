@@ -1,4 +1,4 @@
-# wav2flac_sample_converter
+# wav2flac-samples-converter
  Automatic audio converter. From wav (or aif) to flac, for all your directory and subdirectories content
 
 Hello clochard!
@@ -36,7 +36,7 @@ Extra goodies:
 - all your ._ wav files (supplementary to the original wav files, with no relevant extra info) will be automatically removed from your folders! These files are normally 4kB in size, ignored by the system, and hidden, but if you are a windows user you know what I am talking about... disgusting and dummy files...
 - all your documentation files (.txt, .jpg, etc.) will be moved in a separate folder called _Documentation, which preserves the same structure of your sample folder.
 - all unrecognized files (no extension or .dat) will be moved in a separate folder called _Unrecognized, which preserves the same structure of your sample folder.
-- you can decide to move all your midi files into a new folder called MIDI, which preserves the same structure (subfolders) for each midi file in the original location.
+- you can decide to move all your midi files into a new folder called _MIDI, which preserves the same structure (subfolders) for each midi file in the original location.
 - you can decide to move all your banks (Arturia, Serum, etc.) into new separate folders (ex: _Arturia Banks), which preserve the same structure (subfolders) for each file in the original location.
 - it works also with aiff samples!
 
