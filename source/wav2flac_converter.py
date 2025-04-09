@@ -56,15 +56,16 @@ def filepathinfo(curr_path, base_path):
 def movewsub(curr_path, base_path, new_fold):
     file_basenm, _, path_prefix, path_suffix = filepathinfo(curr_path, base_path)
     
-    if not(path_suffix[:len(new_fold)] == new_fold): # Continue only if the file is not yet in Old Wav Folder   
+    # Continue only if the file is not already in the target folder
+    if not path_suffix.startswith(new_fold):
         new_move_path = join(path_prefix, new_fold, path_suffix)
         
-        if not(exists(new_move_path)):
-            os.makedirs(new_move_path) # To create nested directories
+        if not exists(new_move_path):
+            os.makedirs(new_move_path)  # Create nested directories if needed
             
         new_move_pth_fl = join(new_move_path, file_basenm)
         shutil.move(curr_path, new_move_pth_fl)
-    
+
 def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_path=os.getcwd()):
     success = False
     if isfile(curr_path):
@@ -94,49 +95,50 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
         if file_bsn[:2] == '._' or file_bsn == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
             os.remove(curr_path)
             
-        elif rltv_path_sffx[:len(lssless_fldnm)] == lssless_fldnm:
+        elif rltv_path_sffx.startswith(lssless_fldnm):  # Use startswith for clarity
             success = True # The process is skipped because the current file is in the Old Wav Path (no conversion needed)
             
         else:
-            if any([x == file_ext for x in lssless_extns]):
-                if file_ext == '.wav':
-                    wav2flac(curr_path)
-                else:
+            try:
+                if any([x == file_ext for x in lssless_extns]):
                     gaudio2flac(curr_path)
                     
-                if remExsWav:
-                    os.remove(curr_path)
-                else:
-                    movewsub(curr_path, orig_path, lssless_fldnm)
+                    if remExsWav:
+                        os.remove(curr_path)
+                    else:
+                        movewsub(curr_path, orig_path, lssless_fldnm)
+                        
+                    success = True
                     
-                success = True
+                elif any([x == file_ext for x in analsys_extns]): # Analysis files of: Ableton, Reaper
+                    os.remove(curr_path)
+                    
+                elif any([x == file_ext for x in unrecog_extns]): # Move unrecognized files to new _Unrecognized folder, inside orig_path
+                    movewsub(curr_path, orig_path, unrecog_fldnm)
                 
-            elif any([x == file_ext for x in analsys_extns]): # Analysis files of: Ableton, Reaper
-                os.remove(curr_path)
+                elif any([x == file_ext for x in docu_extns]): # Move documentation files to new _Documentation folder, inside orig_path
+                    movewsub(curr_path, orig_path, docu_fldnm)
+                    
+                elif any([x == file_ext for x in midi_extns]) and moveMIDI: # Move midi files to new MIDI folder, inside orig_path
+                    movewsub(curr_path, orig_path, midi_fldnm)
+                    
+                elif any([x == file_ext for x in arturia_extns]) and moveBanks: # Move arturia files to new _Arturia Banks folder, inside orig_path
+                    movewsub(curr_path, orig_path, arturia_fldnm)
+                    
+                elif any([x == file_ext for x in serum_extns]) and moveBanks: # Move serum files to new _Serum Banks folder, inside orig_path
+                    movewsub(curr_path, orig_path, serum_fldnm)
                 
-            elif any([x == file_ext for x in unrecog_extns]): # Move unrecognized files to new _Unrecognized folder, inside orig_path
-                movewsub(curr_path, orig_path, unrecog_fldnm)
-            
-            elif any([x == file_ext for x in docu_extns]): # Move documentation files to new _Documentation folder, inside orig_path
-                movewsub(curr_path, orig_path, docu_fldnm)
+                elif any([x == file_ext for x in vital_extns]) and moveBanks: # Move vital files to new _Vital Banks folder, inside orig_path
+                    movewsub(curr_path, orig_path, vital_fldnm)
                 
-            elif any([x == file_ext for x in midi_extns]) and moveMIDI: # Move midi files to new MIDI folder, inside orig_path
-                movewsub(curr_path, orig_path, midi_fldnm)
+                elif any([x == file_ext for x in ableton_extns]) and moveBanks: # Move ableton files to new _Ableton Banks folder, inside orig_path
+                    movewsub(curr_path, orig_path, ableton_fldnm)
                 
-            elif any([x == file_ext for x in arturia_extns]) and moveBanks: # Move arturia files to new _Arturia Banks folder, inside orig_path
-                movewsub(curr_path, orig_path, arturia_fldnm)
-                
-            elif any([x == file_ext for x in serum_extns]) and moveBanks: # Move serum files to new _Serum Banks folder, inside orig_path
-                movewsub(curr_path, orig_path, serum_fldnm)
-            
-            elif any([x == file_ext for x in vital_extns]) and moveBanks: # Move vital files to new _Vital Banks folder, inside orig_path
-                movewsub(curr_path, orig_path, vital_fldnm)
-            
-            elif any([x == file_ext for x in ableton_extns]) and moveBanks: # Move ableton files to new _Ableton Banks folder, inside orig_path
-                movewsub(curr_path, orig_path, ableton_fldnm)
-            
-            elif any([x == file_ext for x in natinst_extns]) and moveBanks: # Move native instruments files to new _NI Banks folder, inside orig_path
-                movewsub(curr_path, orig_path, natinst_fldnm)
+                elif any([x == file_ext for x in natinst_extns]) and moveBanks: # Move native instruments files to new _NI Banks folder, inside orig_path
+                    movewsub(curr_path, orig_path, natinst_fldnm)
+
+            except Exception as e:
+                print(f"Error processing file {curr_path}: {e}")
                 
     return success
     
@@ -144,6 +146,8 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
 scan_path = [input(f'Samples folder ([{os.getcwd()}]): ') or os.getcwd()]
 origin_scan_path = scan_path.copy()
 all_paths = scan_path.copy()
+
+prmpt_msg = 'Just "y" or "n", fucking asshole!'
 
 rem_usr_in = input('Do you want to remove pre-existing wav files? (y/[n]): ') or 'n'
 if rem_usr_in == 'y':
@@ -153,24 +157,24 @@ elif rem_usr_in == 'n':
     print("A new folder (_old_wav_check) will be created and " \
           "all the pre-existing samples will be moved there!")
 else:
-    raise Exception('Just "y" or "n", fucking asshole!')
-    
+    raise ValueError(prmpt_msg)
+
 move_midi_in = input('Do you want to move midi file in a separate MIDI folder? ([y]/n): ') or 'y'
 if move_midi_in == 'y':
     move_mid = True
 elif move_midi_in == 'n':
     move_mid = False
 else:
-    raise Exception('Just "y" or "n", fucking asshole!')
-    
+    raise ValueError(prmpt_msg)
+
 move_banks_in = input('Do you want to move banks file in separate folders? ([y]/n): ') or 'y'
 if move_banks_in == 'y':
     move_bnk = True
 elif move_banks_in == 'n':
     move_bnk = False
 else:
-    raise Exception('Just "y" or "n", fucking asshole!')
-    
+    raise ValueError(prmpt_msg)
+
 if move_mid:
     print("Note 1: a new folder (_MIDI) will be created in: [" \
           f"{origin_scan_path[0]}] " \
@@ -200,8 +204,8 @@ for idx in tqdm(range(len(files_conv))):
         succ = fileconv(curr_fl_pth, remExsWav=rem_wav, moveMIDI=move_mid, moveBanks=move_bnk, orig_path=origin_scan_path[0])
         if succ:
             files_succ_conv += 1
-    except:
-        # print('Error with sample: '+curr_fl_pth)
+    except Exception as e:
+        print(f"Error with sample {curr_fl_pth}: {e}")
         files_err.append(curr_fl_pth)
 
 some_fld_empty = True
@@ -214,7 +218,8 @@ while some_fld_empty:
                 os.rmdir(curr_fold)
                 remvd_flds.append(curr_fold)
                 some_fld_empty = True
-            except:
+            except Exception as e:
+                print(f"Error deleting folder {curr_fold}: {e}")
                 fold_hidd_nr.append(curr_fold)
 
 if len(remvd_flds) > 0:
@@ -229,7 +234,6 @@ if len(remvd_flds) > 0:
         d.write('The following folders were deleted because empty: \n')
         for line in remvd_flds:
             d.write(f"{unidecode(line)}\n")
-    d.close()
 
 err_report_filename = join(origin_scan_path[0],'wav_errors.txt')
 if exists(err_report_filename):
@@ -245,8 +249,8 @@ if len(files_err) > 0 or len(fold_hidd_nr) > 0:
             f.write('\nThe following hidden (or empty) folders were not deleted (please check file permission): \n')
             for line in fold_hidd_nr:
                 f.write(f"{unidecode(line)}\n")
-    f.close()
-    
-print(f"Succesfully coverted {files_succ_conv} (of {files_succ_conv+len(files_err)}) wav files into flac")
+
+
+print(f"Successfully converted {files_succ_conv} (of {files_succ_conv+len(files_err)}) audio files into flac")
 
 input('Press Enter to exit...')
