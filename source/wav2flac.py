@@ -143,7 +143,7 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
     return success
     
 ####~ Core              ~####
-scan_path = [input(f'Samples folder ([{os.getcwd()}]): ') or os.getcwd()]
+scan_path = [input(f'Samples main folder (default is [{os.getcwd()}]): ') or os.getcwd()]
 origin_scan_path = scan_path.copy()
 all_paths = scan_path.copy()
 

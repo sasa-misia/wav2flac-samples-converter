@@ -242,7 +242,7 @@ void delete_empty_folders(const fs::path& root_path, std::vector<fs::path>& dele
 
 int main() {
     // Verify ffmpeg installation
-    if (system("ffmpeg -version") != 0) {
+    if (system("ffmpeg -version > NUL 2>&1") != 0) { // Suppress output
         std::cerr << "FFmpeg not installed or not present in PATH!\n";
         return 1;
     }
@@ -254,7 +254,7 @@ int main() {
     bool delete_original = false;
 
     // User interface for directory path
-    std::cout << "Folder path [" << root_path << "]: ";
+    std::cout << "Samples main folder (default is [" << root_path << "]): ";
     std::string user_input;
     std::getline(std::cin, user_input);
     
@@ -273,6 +273,10 @@ int main() {
     delete_original = (tolower(response) == 'y');
     if (response != '\n') std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Clear input buffer
 
+    if (!delete_original) {
+        std::cout << "Note: All WAV files will be moved to: [" << (root_path / old_wav_folder_name) << "]\n";
+    }
+
     // Default: move MIDI files
     std::cout << "Do you want to move MIDI files to a separate folder? ([y]/n): ";
     char move_midi_response;
@@ -280,12 +284,20 @@ int main() {
     bool move_midi = (tolower(move_midi_response) != 'n');
     if (move_midi_response != '\n') std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Clear input buffer
 
+    if (move_midi) {
+        std::cout << "Note: all MIDI files will be moved to: [" << (root_path / midi_folder_name) << "]\n";
+    }
+
     // Default: move bank files
     std::cout << "Do you want to move bank files to separate folders? ([y]/n): ";
     char move_banks_response;
     std::cin.get(move_banks_response);
     bool move_banks = (tolower(move_banks_response) != 'n');
     if (move_banks_response != '\n') std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Clear input buffer
+
+    if (move_banks) {
+        std::cout << "Note: all bank files will be moved to separate folders, like for instance: [" << (root_path / arturia_folder_name) << "]\n";
+    }
 
     // Prepare folders for old WAV files, MIDI files, and other categories
     fs::path old_wav_folder = root_path / old_wav_folder_name;
