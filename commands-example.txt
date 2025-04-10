@@ -1,0 +1,22 @@
+First, my friend, you have to open a terminal window and navigate to the location of the project.
+Remember, these command are tested with windows, if you are on Linux or macos, please replace \ with /.
+For instance, in my case I have:
+
+cd C:\Users\[my_username]\Documents\GitHub\wav2flac-samples-converter
+
+Then, you may use different commands, like the ones below.
+
+------------------------------------------------
+Compile rc icon (windres, from MiniGW), needed if you want the icon with exe compiled from cpp:
+
+windres assets\resources.rc -o resources.o
+
+------------------------------------------------
+Compile static exe, python version (pyinstaller lib):
+
+pyinstaller --onefile --icon=assets\wave.ico source\wav2flac.py
+
+------------------------------------------------
+Compile static exe, cpp version (g++) (remove assets\resources.o if you don't want icon):
+
+g++ -static -o wav2flac.exe source\wav2flac.cpp assets\resources.o -lstdc++fs -lpthread
