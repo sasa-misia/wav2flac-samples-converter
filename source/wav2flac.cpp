@@ -244,6 +244,9 @@ int main() {
     // Verify ffmpeg installation
     if (system("ffmpeg -version > NUL 2>&1") != 0) { // Suppress output
         std::cerr << "FFmpeg not installed or not present in PATH!\n";
+        std::cerr << "Please copy ffmpeg.exe in [" << fs::current_path() << "] or add it to the PATH...\n";
+        std::cout << "Press Enter to exit...";
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         return 1;
     }
 
@@ -261,7 +264,9 @@ int main() {
     if (!user_input.empty()) {
         root_path = fs::path(user_input);
         if (!fs::exists(root_path)) {
-            std::cerr << "Invalid path!\n";
+            std::cerr << "Invalid path! [" << root_path << "]\n";
+            std::cout << "Press Enter to exit...";
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             return 1;
         }
     }
@@ -335,6 +340,8 @@ int main() {
     
     if (audio_files.empty()) {
         std::cout << "No audio files found!\n";
+        std::cout << "Press Enter to exit...";
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         return 0;
     }
 
