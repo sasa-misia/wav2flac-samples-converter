@@ -379,5 +379,8 @@ int main() {
         std::cout << "Error details saved in conversion_errors.log\n";
     }
 
+    std::cout << "Press Enter to exit...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
     return 0;
 }
