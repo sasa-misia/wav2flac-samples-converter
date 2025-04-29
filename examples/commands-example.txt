@@ -19,4 +19,4 @@ pyinstaller --onefile --icon="${pwd}\assets\wave.ico" "${pwd}\source\wav2flac.py
 ------------------------------------------------
 Compile static exe, cpp version (g++) (remove assets\resources.o if you don't want icon):
 
-g++ -static -o "${pwd}\wav2flac.exe" "${pwd}\source\wav2flac.cpp" "${pwd}\assets\resources.o" -lstdc++fs -lpthread
+g++ -static -o "${pwd}\wav2flac-win64.exe" "${pwd}\source\wav2flac.cpp" "${pwd}\assets\resources.o" -lstdc++fs -lpthread

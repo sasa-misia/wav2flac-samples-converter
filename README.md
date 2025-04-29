@@ -11,15 +11,13 @@ Well, this is the solution for you, motherf*cker!!!
 This program will automatically convert all your wav samples into flac files, to save storage but without losing quality. 
 If you are lucky, you can save up to 70% of storage!
 
-You can use it as an exe file with Windows or as a script from python.
+You can use it as an exe file (Windows) or as an interactive script from python.
 
-Link to exe file: https://mega.nz/folder/ZK0QkKwB#z4Ihm6bcjdk8dUJKeYOHWw
+In order to use it as an executable, you have to move the wav2flac-win64.exe and ffmpeg.exe (it is free and open source) files to your samples folder (or also a different folder but with both exe files in the same location), then you just need to run it and the program will do the hard work for you, while you're eating fat and crispy chips on your sofa...
 
-In order to use it as an executable, you have to move the wav2flac_converter.exe and ffmpeg.exe files to your samples folder (or also a different folder but with both exe files in the same location), then you just need to run it and the program will do the hard work for you, while you're eating fat and crispy chips on your sofa...
+If you prefer to mod the script or run it with python, well, just run it but first remember to download all the modules required: os, pydub, tqdm, shutil, and unidecode.
 
-If you prefer to mod the script or run it with python, well, just run it but first remember to download all the modules required: os, pydub, tqdm, shutil, and unidecode. 
-
-PLEASE NOTE (1): if you run it with python, then you need also to have installed ffmpeg in your pc! Please install it with pip or conda, depending on your environment (or with the exe file in the link above).
+PLEASE NOTE (1): if you run it with python, then you need also to have installed ffmpeg in your pc! Please install it with pip or conda, depending on your environment.
 
 PLEASE NOTE (2): you can decide if you want to remove your wav files or maintain them. 
 - If you opt for the 1st option **YOUR OLD WAV SAMPLES WILL BE REMOVED DIRECTLY, WITHOUT PASSING FROM THE TRASH**! 
@@ -45,4 +43,4 @@ Maybe grabbing a f*cking beat from my studio?
 2Musicians Studio 
 https://2musicians-studio.com/
 
-Cheers ;)
+Cheers ✌🏻
