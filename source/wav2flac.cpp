@@ -32,6 +32,7 @@ const std::string ableton_folder_name = "_Ableton Banks";
 const std::string natinst_folder_name = "_NI Banks";
 const std::string unrecognized_folder_name = "_Unrecognized";
 const std::string documentation_folder_name = "_Documentation";
+const std::string archive_folder_name = "_Archives";
 
 // Define file extension categories
 const std::vector<std::string> lossless_extensions = {".wav", ".aiff", ".aif"};
@@ -44,6 +45,7 @@ const std::vector<std::string> natinst_extensions = {".nmsv", ".nksf", ".bnk", "
 const std::vector<std::string> analysis_extensions = {".asd", ".reapeaks"};
 const std::vector<std::string> unrecognized_extensions = {".dat", ""};
 const std::vector<std::string> documentation_extensions = {".html", ".docx", ".doc", ".pdf", ".jpg", ".jpeg", ".png", ".txt", ".rtf", ".xml", ".asc", ".msg", ".wpd", ".wps", ".url"};
+const std::vector<std::string> archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"};
 
 // Helper function to check if an extension belongs to a category
 bool has_extension(const std::string& extension, const std::vector<std::string>& extensions) {
@@ -124,7 +126,8 @@ void process_batch(const std::vector<fs::path>& batch,
                   const fs::path& ableton_folder,
                   const fs::path& natinst_folder,
                   const fs::path& unrecognized_folder,
-                  const fs::path& documentation_folder) {
+                  const fs::path& documentation_folder,
+                  const fs::path& archive_folder) {
     for (const auto& file : batch) {
         if (state.stop_requested) return;
 
@@ -157,6 +160,12 @@ void process_batch(const std::vector<fs::path>& batch,
 
         if (has_extension(extension, documentation_extensions)) {
             move_file_with_relative_structure(file, base_path, documentation_folder);
+            state.processed.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+
+        if (has_extension(extension, archive_extensions)) {
+            move_file_with_relative_structure(file, base_path, archive_folder);
             state.processed.fetch_add(1, std::memory_order_relaxed);
             continue;
         }
@@ -314,6 +323,7 @@ int main() {
     fs::path natinst_folder = root_path / natinst_folder_name;
     fs::path unrecognized_folder = root_path / unrecognized_folder_name;
     fs::path documentation_folder = root_path / documentation_folder_name;
+    fs::path archive_folder = root_path / archive_folder_name;
 
     // Grouping files by extension
     std::vector<fs::path> audio_files;
@@ -331,6 +341,7 @@ int main() {
                 has_extension(extension, analysis_extensions) ||
                 has_extension(extension, unrecognized_extensions) ||
                 has_extension(extension, documentation_extensions) ||
+                has_extension(extension, archive_extensions) ||
                 entry.path().filename().string().rfind("._", 0) == 0 ||
                 entry.path().filename() == ".DS_Store") {
                 audio_files.push_back(entry.path());
@@ -359,7 +370,8 @@ int main() {
         if (!batch.empty()) {
             workers.emplace_back(process_batch, std::ref(batch), std::ref(state), delete_original, 
                                  root_path, old_wav_folder, midi_folder, arturia_folder, serum_folder, 
-                                 vital_folder, ableton_folder, natinst_folder, unrecognized_folder, documentation_folder);
+                                 vital_folder, ableton_folder, natinst_folder, unrecognized_folder, 
+                                 documentation_folder, archive_folder);
         }
     }
 

@@ -80,6 +80,7 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
         vital_fldnm   = '_Vital Banks'
         ableton_fldnm = '_Ableton Banks'
         natinst_fldnm = '_NI Banks'
+        archive_fldnm = '_Archives'
         
         lssless_extns = ['.wav', '.aif', '.aiff']
         analsys_extns = ['.asd', '.reapeaks']
@@ -91,6 +92,7 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
         vital_extns   = ['.vitalbank', '.vital', '.vitalskin']
         ableton_extns = ['.abl', '.ablbundle', '.adg', '.agr', '.adv', '.alc', '.alp', '.als', '.ams', '.amxd', '.ask', '.cfg', '.xmp']
         natinst_extns = ['.nmsv', '.nksf', '.bnk', '.ksd', '.ngrr']
+        archive_extns = ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz']
         
         if file_bsn[:2] == '._' or file_bsn == '.DS_Store': # Stupid fake, hidden, and not necessary files (macos...)
             os.remove(curr_path)
@@ -136,6 +138,9 @@ def fileconv(curr_path, remExsWav=True, moveMIDI=False, moveBanks=True, orig_pat
                 
                 elif any([x == file_ext for x in natinst_extns]) and moveBanks: # Move native instruments files to new _NI Banks folder, inside orig_path
                     movewsub(curr_path, orig_path, natinst_fldnm)
+                
+                elif any([x == file_ext for x in archive_extns]): # Move archive files to new _Archives folder, inside orig_path
+                    movewsub(curr_path, orig_path, archive_fldnm)
 
             except Exception as e:
                 print(f"Error processing file {curr_path}: {e}")
