@@ -9,6 +9,9 @@
 #include <sstream>
 #include <algorithm>
 #include <fstream>
+#include <map>
+#include <locale>
+#include <codecvt>
 
 namespace fs = std::filesystem;
 
@@ -20,6 +23,14 @@ struct ConversionState {
     std::vector<std::string> error_messages;
     std::mutex log_mutex;
     bool stop_requested{false};
+};
+
+// Structure to track filename conversions
+struct RenameTracker {
+    std::vector<std::pair<std::string, std::string>> renamed_files;
+    std::vector<std::pair<std::string, std::string>> renamed_folders;
+    std::vector<std::string> rename_errors;
+    std::mutex rename_mutex;
 };
 
 // Define folder names
@@ -47,9 +58,206 @@ const std::vector<std::string> unrecognized_extensions = {".dat", ""};
 const std::vector<std::string> documentation_extensions = {".html", ".docx", ".doc", ".pdf", ".jpg", ".jpeg", ".png", ".txt", ".rtf", ".xml", ".asc", ".msg", ".wpd", ".wps", ".url"};
 const std::vector<std::string> archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"};
 
+// Character mapping for non-ASCII to ASCII conversion
+const std::map<char32_t, std::string> ascii_conversion_map = {
+    // Latin characters with diacritics
+    {U'à', "a"}, {U'á', "a"}, {U'â', "a"}, {U'ã', "a"}, {U'ä', "a"}, {U'å', "a"}, {U'æ', "ae"},
+    {U'ç', "c"}, {U'è', "e"}, {U'é', "e"}, {U'ê', "e"}, {U'ë', "e"}, {U'ì', "i"}, {U'í', "i"},
+    {U'î', "i"}, {U'ï', "i"}, {U'ð', "d"}, {U'ñ', "n"}, {U'ò', "o"}, {U'ó', "o"}, {U'ô', "o"},
+    {U'õ', "o"}, {U'ö', "o"}, {U'ø', "o"}, {U'ù', "u"}, {U'ú', "u"}, {U'û', "u"}, {U'ü', "u"},
+    {U'ý', "y"}, {U'þ', "th"}, {U'ÿ', "y"},
+    // Uppercase variants
+    {U'À', "A"}, {U'Á', "A"}, {U'Â', "A"}, {U'Ã', "A"}, {U'Ä', "A"}, {U'Å', "A"}, {U'Æ', "AE"},
+    {U'Ç', "C"}, {U'È', "E"}, {U'É', "E"}, {U'Ê', "E"}, {U'Ë', "E"}, {U'Ì', "I"}, {U'Í', "I"},
+    {U'Î', "I"}, {U'Ï', "I"}, {U'Ð', "D"}, {U'Ñ', "N"}, {U'Ò', "O"}, {U'Ó', "O"}, {U'Ô', "O"},
+    {U'Õ', "O"}, {U'Ö', "O"}, {U'Ø', "O"}, {U'Ù', "U"}, {U'Ú', "U"}, {U'Û', "U"}, {U'Ü', "U"},
+    {U'Ý', "Y"}, {U'Þ', "TH"},
+    // German umlauts and sharp s
+    {U'ß', "ss"},
+    // Eastern European characters
+    {U'ą', "a"}, {U'ć', "c"}, {U'ę', "e"}, {U'ł', "l"}, {U'ń', "n"}, {U'ś', "s"}, {U'ź', "z"}, {U'ż', "z"},
+    {U'Ą', "A"}, {U'Ć', "C"}, {U'Ę', "E"}, {U'Ł', "L"}, {U'Ń', "N"}, {U'Ś', "S"}, {U'Ź', "Z"}, {U'Ż', "Z"},
+    // Czech/Slovak
+    {U'č', "c"}, {U'ď', "d"}, {U'ň', "n"}, {U'ř', "r"}, {U'š', "s"}, {U'ť', "t"}, {U'ž', "z"},
+    {U'Č', "C"}, {U'Ď', "D"}, {U'Ň', "N"}, {U'Ř', "R"}, {U'Š', "S"}, {U'Ť', "T"}, {U'Ž', "Z"},
+    // Hungarian
+    {U'ő', "o"}, {U'ű', "u"}, {U'Ő', "O"}, {U'Ű', "U"},
+    // Common symbols
+    {U'\u2013', "-"}, {U'—', "-"}, {U'\u2018', "'"}, {U'\u2019', "'"}, {U'"', "\""}, {U'"', "\""}, // – is \u2013 | ' is \u2018 | ' is \u2019
+    {U'«', "\""}, {U'»', "\""}, {U'…', "..."}, {U'•', "*"}
+};
+
 // Helper function to check if an extension belongs to a category
 bool has_extension(const std::string& extension, const std::vector<std::string>& extensions) {
     return std::find(extensions.begin(), extensions.end(), extension) != extensions.end();
+}
+
+// Function to check if a string contains non-ASCII characters
+bool contains_non_ascii(const std::string& str) {
+    for (unsigned char c : str) {
+        if (c > 127) return true;
+    }
+    return false;
+}
+
+// Function to convert UTF-8 string to UTF-32
+std::u32string utf8_to_utf32(const std::string& utf8_str) {
+    try {
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> converter;
+        return converter.from_bytes(utf8_str);
+    } catch (...) {
+        // Fallback: treat as ASCII
+        std::u32string result;
+        for (char c : utf8_str) {
+            result.push_back(static_cast<char32_t>(c));
+        }
+        return result;
+    }
+}
+
+// Function to convert non-ASCII characters to ASCII equivalents
+std::string convert_to_ascii(const std::string& input) {
+    if (!contains_non_ascii(input)) {
+        return input; // Already ASCII
+    }
+    
+    std::u32string utf32_str = utf8_to_utf32(input);
+    std::string result;
+    
+    for (char32_t ch : utf32_str) {
+        if (ch <= 127) {
+            // Already ASCII
+            result += static_cast<char>(ch);
+        } else {
+            // Look for conversion in map
+            auto it = ascii_conversion_map.find(ch);
+            if (it != ascii_conversion_map.end()) {
+                result += it->second;
+            } else {
+                // Unknown character, replace with *
+                result += "*";
+            }
+        }
+    }
+    
+    return result;
+}
+
+// Function to generate a unique ASCII filename if collision occurs
+std::string generate_unique_ascii_name(const fs::path& directory, const std::string& base_name, const std::string& extension) {
+    std::string ascii_name = convert_to_ascii(base_name);
+    fs::path candidate = directory / (ascii_name + extension);
+    
+    int counter = 1;
+    while (fs::exists(candidate)) {
+        ascii_name = convert_to_ascii(base_name) + "_" + std::to_string(counter);
+        candidate = directory / (ascii_name + extension);
+        counter++;
+    }
+    
+    return ascii_name + extension;
+}
+
+// Function to rename files and folders to ASCII equivalents
+void convert_names_to_ascii(const fs::path& root_path, RenameTracker& tracker) {
+    std::vector<fs::path> folders_to_rename;
+    std::vector<fs::path> files_to_rename;
+    
+    // Collect all folders and files that need renaming
+    try {
+        for (const auto& entry : fs::recursive_directory_iterator(root_path)) {
+            std::string filename = entry.path().filename().string();
+            if (contains_non_ascii(filename)) {
+                if (entry.is_directory()) {
+                    folders_to_rename.push_back(entry.path());
+                } else if (entry.is_regular_file()) {
+                    files_to_rename.push_back(entry.path());
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+        tracker.rename_errors.push_back("Error scanning directory: " + std::string(e.what()));
+        return;
+    }
+    
+    // Rename folders first (deepest first to avoid path conflicts)
+    std::sort(folders_to_rename.begin(), folders_to_rename.end(), 
+              [](const fs::path& a, const fs::path& b) {
+                  return a.string().length() > b.string().length();
+              });
+    
+    for (const auto& folder_path : folders_to_rename) {
+        try {
+            std::string original_name = folder_path.filename().string();
+            std::string ascii_name = convert_to_ascii(original_name);
+            
+            // Handle potential name collisions
+            fs::path parent = folder_path.parent_path();
+            fs::path new_path = parent / ascii_name;
+            
+            int counter = 1;
+            while (fs::exists(new_path) && new_path != folder_path) {
+                ascii_name = convert_to_ascii(original_name) + "_" + std::to_string(counter);
+                new_path = parent / ascii_name;
+                counter++;
+            }
+            
+            if (new_path != folder_path) {
+                fs::rename(folder_path, new_path);
+                std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+                tracker.renamed_folders.emplace_back(folder_path.string(), new_path.string());
+            }
+        } catch (const std::exception& e) {
+            std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+            tracker.rename_errors.push_back("Failed to rename folder [" + folder_path.string() + "]: " + e.what());
+        }
+    }
+    
+    // Re-scan for files after folder renaming
+    files_to_rename.clear();
+    try {
+        for (const auto& entry : fs::recursive_directory_iterator(root_path)) {
+            if (entry.is_regular_file()) {
+                std::string filename = entry.path().filename().string();
+                if (contains_non_ascii(filename)) {
+                    files_to_rename.push_back(entry.path());
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+        tracker.rename_errors.push_back("Error re-scanning files after folder rename: " + std::string(e.what()));
+    }
+    
+    // Rename files
+    for (const auto& file_path : files_to_rename) {
+        try {
+            std::string original_name = file_path.stem().string();
+            std::string extension = file_path.extension().string();
+            fs::path parent = file_path.parent_path();
+            
+            std::string new_filename = generate_unique_ascii_name(parent, original_name, extension);
+            fs::path new_path = parent / new_filename;
+            
+            // Copy file to new location with ASCII name
+            fs::copy_file(file_path, new_path, fs::copy_options::overwrite_existing);
+            
+            // Verify the copy was successful
+            if (fs::exists(new_path) && fs::file_size(new_path) == fs::file_size(file_path)) {
+                // Remove original file only after successful copy
+                fs::remove(file_path);
+                std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+                tracker.renamed_files.emplace_back(file_path.string(), new_path.string());
+            } else {
+                std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+                tracker.rename_errors.push_back("Copy verification failed for: " + file_path.string());
+            }
+        } catch (const std::exception& e) {
+            std::lock_guard<std::mutex> lock(tracker.rename_mutex);
+            tracker.rename_errors.push_back("Failed to rename file [" + file_path.string() + "]: " + e.what());
+        }
+    }
 }
 
 // Function to execute shell commands with timeout
@@ -261,9 +469,11 @@ int main() {
 
     // Initial configuration
     ConversionState state;
+    RenameTracker rename_tracker;
     fs::path root_path = fs::current_path();
     unsigned int thread_count = std::max(std::thread::hardware_concurrency(), 1u);
     bool delete_original = false;
+    bool convert_to_ascii = false;
 
     // User interface for directory path
     std::cout << "Samples main folder (default is [" << root_path << "]): ";
@@ -278,6 +488,23 @@ int main() {
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             return 1;
         }
+    }
+
+    // Default: do not convert files into ASCII
+    std::cout << "Convert non-ASCII filenames and folder names to ASCII equivalents? (y/[n]): ";
+    char ascii_response;
+    std::cin.get(ascii_response);
+    convert_to_ascii = (tolower(ascii_response) == 'y');
+    if (ascii_response != '\n') std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    if (convert_to_ascii) {
+        std::cout << "Note: Files and folders with non-ASCII characters will be renamed to ASCII equivalents.\n";
+        std::cout << "Original files will be replaced with ASCII-named copies.\n";
+        std::cout << "Converting names to ASCII...\n";
+        
+        convert_names_to_ascii(root_path, rename_tracker);
+        
+        std::cout << "ASCII conversion completed.\n";
     }
 
     // Default: do not delete original files
@@ -390,6 +617,30 @@ int main() {
     std::vector<fs::path> deleted_folders;
     delete_empty_folders(root_path, deleted_folders);
 
+    // Display ASCII conversion results
+    if (convert_to_ascii) {
+        if (!rename_tracker.renamed_files.empty()) {
+            std::cout << "\nRenamed files to ASCII:\n";
+            for (const auto& rename : rename_tracker.renamed_files) {
+                std::cout << "  " << rename.first << " -> " << rename.second << "\n";
+            }
+        }
+        
+        if (!rename_tracker.renamed_folders.empty()) {
+            std::cout << "\nRenamed folders to ASCII:\n";
+            for (const auto& rename : rename_tracker.renamed_folders) {
+                std::cout << "  " << rename.first << " -> " << rename.second << "\n";
+            }
+        }
+        
+        if (!rename_tracker.rename_errors.empty()) {
+            std::cout << "\nASCII conversion errors:\n";
+            for (const auto& error : rename_tracker.rename_errors) {
+                std::cout << "  " << error << "\n";
+            }
+        }
+    }
+
     if (!deleted_folders.empty()) {
         std::cout << "\nDeleted empty folders:\n";
         for (const auto& folder : deleted_folders) {
@@ -402,11 +653,31 @@ int main() {
     std::cout << "Files converted: " << state.processed << "\n";
     std::cout << "Errors: " << state.errors << "\n";
     
-    if (!state.error_messages.empty()) {
+    if (convert_to_ascii) {
+        std::cout << "Files renamed to ASCII: " << rename_tracker.renamed_files.size() << "\n";
+        std::cout << "Folders renamed to ASCII: " << rename_tracker.renamed_folders.size() << "\n";
+        std::cout << "ASCII conversion errors: " << rename_tracker.rename_errors.size() << "\n";
+    }
+    
+    // Write comprehensive error log
+    if (!state.error_messages.empty() || !rename_tracker.rename_errors.empty()) {
         std::ofstream error_log("conversion_errors.log");
-        for (const auto& msg : state.error_messages) {
-            error_log << msg << "\n";
+        
+        if (!state.error_messages.empty()) {
+            error_log << "=== CONVERSION ERRORS ===\n";
+            for (const auto& msg : state.error_messages) {
+                error_log << msg << "\n";
+            }
+            error_log << "\n";
         }
+        
+        if (!rename_tracker.rename_errors.empty()) {
+            error_log << "=== ASCII CONVERSION ERRORS ===\n";
+            for (const auto& msg : rename_tracker.rename_errors) {
+                error_log << msg << "\n";
+            }
+        }
+        
         std::cout << "Error details saved in conversion_errors.log\n";
     }
 
